@@ -1,0 +1,56 @@
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const db = require('../db');
+
+const router = express.Router();
+
+// Đăng ký
+router.post('/register', async (req, res) => {
+  const { phone, password, name } = req.body;
+
+  if (!phone || !password) {
+    return res.status(400).json({ message: 'Vui lòng nhập số điện thoại và mật khẩu' });
+  }
+  if (!/^[0-9]{9,11}$/.test(phone)) {
+    return res.status(400).json({ message: 'Số điện thoại không hợp lệ' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 6 ký tự' });
+  }
+
+  const existing = db.prepare('SELECT id FROM users WHERE phone = ?').get(phone);
+  if (existing) {
+    return res.status(409).json({ message: 'Số điện thoại đã được đăng ký' });
+  }
+
+  const hashed = await bcrypt.hash(password, 10);
+  const result = db.prepare('INSERT INTO users (phone, password, name) VALUES (?, ?, ?)').run(phone, hashed, name || '');
+  const token = jwt.sign({ userId: result.lastInsertRowid }, process.env.JWT_SECRET, { expiresIn: '30d' });
+
+  res.status(201).json({ token, user: { id: result.lastInsertRowid, phone, name: name || '' } });
+});
+
+// Đăng nhập
+router.post('/login', async (req, res) => {
+  const { phone, password } = req.body;
+
+  if (!phone || !password) {
+    return res.status(400).json({ message: 'Vui lòng nhập số điện thoại và mật khẩu' });
+  }
+
+  const user = db.prepare('SELECT * FROM users WHERE phone = ?').get(phone);
+  if (!user) {
+    return res.status(401).json({ message: 'Số điện thoại chưa được đăng ký' });
+  }
+
+  const valid = await bcrypt.compare(password, user.password);
+  if (!valid) {
+    return res.status(401).json({ message: 'Mật khẩu không đúng' });
+  }
+
+  const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
+  res.json({ token, user: { id: user.id, phone: user.phone, name: user.name } });
+});
+
+module.exports = router;
