@@ -6,6 +6,7 @@ const { initDB } = require('./db');
 
 const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/admin', adminRoutes);
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
 // Serve frontend build trong production

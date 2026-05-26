@@ -35,6 +35,11 @@ async function initDB() {
     )
   `);
 
+  // Migrate: thêm cột is_admin nếu chưa có
+  try {
+    await pool.execute(`ALTER TABLE users ADD COLUMN is_admin TINYINT(1) DEFAULT 0`);
+  } catch { /* cột đã tồn tại */ }
+
   console.log('Database đã sẵn sàng');
 }
 

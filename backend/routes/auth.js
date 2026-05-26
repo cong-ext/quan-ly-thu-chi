@@ -31,7 +31,7 @@ router.post('/register', async (req, res) => {
   );
 
   const token = jwt.sign({ userId: result.insertId }, process.env.JWT_SECRET, { expiresIn: '30d' });
-  res.status(201).json({ token, user: { id: result.insertId, phone, name: name || '' } });
+  res.status(201).json({ token, user: { id: result.insertId, phone, name: name || '', is_admin: 0 } });
 });
 
 // Đăng nhập
@@ -54,7 +54,7 @@ router.post('/login', async (req, res) => {
   }
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-  res.json({ token, user: { id: user.id, phone: user.phone, name: user.name } });
+  res.json({ token, user: { id: user.id, phone: user.phone, name: user.name, is_admin: user.is_admin || 0 } });
 });
 
 module.exports = router;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import HomePage from '../pages/HomePage';
 import ReportPage from '../pages/ReportPage';
+import AdminPage from '../pages/AdminPage';
 
 export default function Layout({ user, onLogout }) {
   const [tab, setTab] = useState('home');
@@ -23,7 +24,9 @@ export default function Layout({ user, onLogout }) {
       </header>
 
       <main className="min-h-screen">
-        {tab === 'home' ? <HomePage /> : <ReportPage />}
+        {tab === 'home'   && <HomePage />}
+        {tab === 'report' && <ReportPage />}
+        {tab === 'admin'  && <AdminPage user={user} />}
       </main>
 
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border-t border-gray-200 flex z-10">
@@ -45,6 +48,17 @@ export default function Layout({ user, onLogout }) {
           <span className="text-xl">◈</span>
           <span className="text-xs font-medium">Báo cáo</span>
         </button>
+        {user.is_admin === 1 && (
+          <button
+            onClick={() => setTab('admin')}
+            className={`flex-1 flex flex-col items-center py-3 gap-0.5 transition-colors ${
+              tab === 'admin' ? 'text-black' : 'text-gray-300 hover:text-gray-500'
+            }`}
+          >
+            <span className="text-xl">⊞</span>
+            <span className="text-xs font-medium">Quản trị</span>
+          </button>
+        )}
       </nav>
     </div>
   );
