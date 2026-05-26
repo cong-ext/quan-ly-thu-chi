@@ -54,6 +54,18 @@ export default function AdminPage({ user }) {
     fetchUsers(search);
   };
 
+  const deleteUser = async (u) => {
+    if (!window.confirm(`Xóa tài khoản "${u.name || u.phone}"?\nToàn bộ giao dịch của họ cũng sẽ bị xóa.`)) return;
+    try {
+      await api.delete(`/admin/users/${u.id}`);
+      showToast('Đã xóa người dùng');
+      fetchStats();
+      fetchUsers(search);
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Xóa thất bại');
+    }
+  };
+
   return (
     <div className="pb-8 px-4 pt-4">
       {toast && (
@@ -130,12 +142,20 @@ export default function AdminPage({ user }) {
                   </div>
                 </div>
                 {u.id !== user.id && (
-                  <button
-                    onClick={() => toggleAdmin(u)}
-                    className="text-xs border border-gray-200 hover:border-black px-2 py-1 text-gray-400 hover:text-black transition-colors flex-shrink-0"
-                  >
-                    {u.is_admin ? 'Thu hồi' : 'Cấp admin'}
-                  </button>
+                  <div className="flex flex-col gap-1 flex-shrink-0">
+                    <button
+                      onClick={() => toggleAdmin(u)}
+                      className="text-xs border border-gray-200 hover:border-black px-2 py-1 text-gray-400 hover:text-black transition-colors"
+                    >
+                      {u.is_admin ? 'Thu hồi' : 'Cấp admin'}
+                    </button>
+                    <button
+                      onClick={() => deleteUser(u)}
+                      className="text-xs border border-gray-200 hover:border-red-400 px-2 py-1 text-gray-300 hover:text-red-400 transition-colors"
+                    >
+                      Xóa
+                    </button>
+                  </div>
                 )}
               </div>
             ))}

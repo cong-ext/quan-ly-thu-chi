@@ -71,4 +71,25 @@ router.patch('/users/:id/admin', async (req, res) => {
   res.json({ message: 'Đã cập nhật' });
 });
 
+// Xóa người dùng (kèm toàn bộ giao dịch)
+router.delete('/users/:id', async (req, res) => {
+  const targetId = Number(req.params.id);
+
+  // Không cho phép tự xóa chính mình
+  if (targetId === req.userId) {
+    return res.status(400).json({ message: 'Không thể tự xóa tài khoản của mình' });
+  }
+
+  const [rows] = await pool.execute('SELECT id FROM users WHERE id = ?', [targetId]);
+  if (rows.length === 0) {
+    return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+  }
+
+  // Xóa giao dịch trước, sau đó xóa user
+  await pool.execute('DELETE FROM transactions WHERE user_id = ?', [targetId]);
+  await pool.execute('DELETE FROM users WHERE id = ?', [targetId]);
+
+  res.json({ message: 'Đã xóa người dùng' });
+});
+
 module.exports = router;
