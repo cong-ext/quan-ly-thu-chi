@@ -67,8 +67,22 @@ app.get('/api/setup-admin', async (req, res) => {
 // Serve frontend build trong production
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../frontend/dist');
-  app.use(express.static(distPath));
-  app.get(/(.*)/, (_, res) => res.sendFile(path.join(distPath, 'index.html')));
+
+  // JS/CSS có hash trong tên → cache dài; HTML không cache để luôn lấy bản mới
+  app.use(express.static(distPath, {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.setHeader('Pragma', 'no-cache');
+        res.setHeader('Expires', '0');
+      }
+    },
+  }));
+
+  app.get(/(.*)/, (_, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
 }
 
 // Khởi động server sau khi DB sẵn sàng
