@@ -19,6 +19,22 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/admin', adminRoutes);
 app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 
+// Endpoint xóa toàn bộ dữ liệu — bảo vệ bằng SETUP_SECRET
+app.get('/api/reset-all', async (req, res) => {
+  const { secret } = req.query;
+  const validSecret = process.env.SETUP_SECRET;
+
+  if (!validSecret || secret !== validSecret) {
+    return res.status(403).json({ message: 'Sai secret key' });
+  }
+
+  const { pool } = require('./db');
+  await pool.execute('DELETE FROM transactions');
+  await pool.execute('DELETE FROM users');
+
+  res.json({ message: 'Đã xóa toàn bộ dữ liệu. Bạn có thể đăng ký tài khoản mới.' });
+});
+
 // Endpoint tạm thời để cấp quyền admin — bảo vệ bằng SETUP_SECRET
 app.get('/api/setup-admin', async (req, res) => {
   const { secret, phone, password } = req.query;
