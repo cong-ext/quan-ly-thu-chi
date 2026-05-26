@@ -21,7 +21,7 @@ app.get('/api/health', (_, res) => res.json({ status: 'ok' }));
 if (process.env.NODE_ENV === 'production') {
   const distPath = path.join(__dirname, '../frontend/dist');
   app.use(express.static(distPath));
-  app.get('*', (_, res) => res.sendFile(path.join(distPath, 'index.html')));
+  app.get(/(.*)/, (_, res) => res.sendFile(path.join(distPath, 'index.html')));
 }
 
 // Khởi động server sau khi DB sẵn sàng
