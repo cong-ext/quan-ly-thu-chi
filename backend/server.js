@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { initDB } = require('./db');
 
 const authRoutes = require('./routes/auth');
 const transactionRoutes = require('./routes/transactions');
@@ -23,6 +24,14 @@ if (process.env.NODE_ENV === 'production') {
   app.get('*', (_, res) => res.sendFile(path.join(distPath, 'index.html')));
 }
 
-app.listen(PORT, () => {
-  console.log(`Server chạy tại http://localhost:${PORT}`);
-});
+// Khởi động server sau khi DB sẵn sàng
+initDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server chạy tại http://localhost:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Không thể kết nối database:', err.message);
+    process.exit(1);
+  });
