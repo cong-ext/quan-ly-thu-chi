@@ -33,12 +33,12 @@ router.post('/', async (req, res) => {
 
 // Lấy danh sách giao dịch
 router.get('/', async (req, res) => {
-  const limit  = Number(req.query.limit)  || 20;
-  const offset = Number(req.query.offset) || 0;
+  const limit  = Math.max(1, Number(req.query.limit)  || 20);
+  const offset = Math.max(0, Number(req.query.offset) || 0);
 
   const [rows] = await pool.execute(
-    'SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?',
-    [req.userId, limit, offset]
+    `SELECT * FROM transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ${limit} OFFSET ${offset}`,
+    [req.userId]
   );
   res.json(rows);
 });
