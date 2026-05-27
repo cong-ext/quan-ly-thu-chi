@@ -1,37 +1,32 @@
 import { useState, useEffect } from 'react';
-import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-} from 'recharts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import api from '../api';
 
-const formatMoney = (n) => Number(n).toLocaleString('vi-VN') + 'đ';
-const formatShort = (n) => {
+const fmt  = (n) => Number(n).toLocaleString('vi-VN') + 'đ';
+const fmtS = (n) => {
   if (n >= 1e9) return (n / 1e9).toFixed(1) + 'tỷ';
   if (n >= 1e6) return (n / 1e6).toFixed(1) + 'tr';
   if (n >= 1e3) return (n / 1e3).toFixed(0) + 'k';
-  return n;
+  return Number(n).toLocaleString();
 };
 
 const PERIODS = [
   { key: 'today', label: 'Hôm nay' },
-  { key: 'week',  label: '7 ngày' },
-  { key: 'month', label: 'Tháng này' },
+  { key: 'week',  label: '7 ngày'  },
+  { key: 'month', label: 'Tháng'   },
 ];
 
-const CATEGORIES = {
+const CATS = {
   'phat-trien': { label: 'Phát triển bản thân', hint: 'Sách, khóa học...' },
-  'sinh-hoat':  { label: 'Sinh hoạt',           hint: 'Xăng, gạo, đồ dùng...' },
-  'tieu-dung':  { label: 'Tiêu dùng',           hint: 'Chi tiêu khác' },
+  'sinh-hoat':  { label: 'Sinh hoạt hàng ngày', hint: 'Xăng, gạo, đồ dùng...' },
+  'tieu-dung':  { label: 'Tiêu dùng chung',     hint: 'Chi tiêu khác' },
 };
-
-// Màu xám phân cấp cho từng danh mục
-const CAT_SHADES = ['#000000', '#6b7280', '#d1d5db'];
+const CAT_COLORS = ['#0a0a0a', '#737373', '#d4d4d4'];
 
 export default function ReportPage() {
   const [period, setPeriod] = useState('month');
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [data,   setData]   = useState(null);
+  const [loading,setLoading]= useState(true);
 
   useEffect(() => {
     setLoading(true);
@@ -40,14 +35,14 @@ export default function ReportPage() {
       .finally(() => setLoading(false));
   }, [period]);
 
-  const thu = data?.summary?.total_thu || 0;
-  const chi = data?.summary?.total_chi || 0;
+  const thu     = data?.summary?.total_thu || 0;
+  const chi     = data?.summary?.total_chi || 0;
   const balance = thu - chi;
 
   const pieData = [
     { name: 'Thu', value: thu },
     { name: 'Chi', value: chi },
-  ].filter((d) => d.value > 0);
+  ].filter(d => d.value > 0);
 
   const barData = (() => {
     if (!data?.byDay) return [];
@@ -56,38 +51,34 @@ export default function ReportPage() {
       if (!map[date]) map[date] = { date, thu: 0, chi: 0 };
       map[date][type] = total;
     });
-    return Object.values(map).map((d) => ({ ...d, label: d.date.slice(5) }));
+    return Object.values(map).map(d => ({ ...d, label: d.date.slice(5) }));
   })();
 
-  // Dữ liệu chi theo danh mục — đảm bảo đủ 3 danh mục dù không có giao dịch
-  const categoryData = (() => {
+  const catData = (() => {
     const raw = data?.byCategory || [];
     const map = {};
     raw.forEach(({ category, total, count }) => { map[category] = { total, count }; });
-    return Object.entries(CATEGORIES).map(([key, meta], i) => ({
-      key,
-      label: meta.label,
-      hint: meta.hint,
+    return Object.entries(CATS).map(([key, meta], i) => ({
+      key, ...meta,
       total: map[key]?.total || 0,
       count: map[key]?.count || 0,
-      shade: CAT_SHADES[i],
+      color: CAT_COLORS[i],
     }));
   })();
 
-  const totalChi = categoryData.reduce((s, c) => s + c.total, 0);
+  const totalChi = catData.reduce((s, c) => s + c.total, 0);
 
   return (
-    <div className="pb-24 px-4 pt-4">
-      {/* Bộ lọc thời gian */}
-      <div className="flex border border-gray-200 mb-5">
-        {PERIODS.map((p) => (
+    <div className="pb-28 px-4 pt-5">
+
+      {/* Period filter */}
+      <div className="flex bg-white rounded-2xl p-1 shadow-sm mb-5">
+        {PERIODS.map(p => (
           <button
             key={p.key}
             onClick={() => setPeriod(p.key)}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
-              period === p.key
-                ? 'bg-black text-white'
-                : 'bg-white text-gray-400 hover:text-black'
+            className={`flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 ${
+              period === p.key ? 'bg-black text-white shadow-sm' : 'text-neutral-400 hover:text-neutral-600'
             }`}
           >
             {p.label}
@@ -96,65 +87,58 @@ export default function ReportPage() {
       </div>
 
       {loading ? (
-        <div className="text-center text-gray-300 py-10 text-sm">Đang tải...</div>
+        <div className="text-center text-neutral-300 py-16 text-sm">Đang tải...</div>
       ) : (
         <>
-          {/* Tóm tắt 3 ô */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="border border-gray-200 bg-white p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Tổng Thu</p>
-              <p className="text-black font-bold text-sm">{formatShort(thu)}</p>
-            </div>
-            <div className="border border-gray-200 bg-white p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Tổng Chi</p>
-              <p className="text-black font-bold text-sm">{formatShort(chi)}</p>
-            </div>
-            <div className="border border-gray-200 bg-white p-3 text-center">
-              <p className="text-xs text-gray-400 mb-1">Số dư</p>
-              <p className={`font-bold text-sm ${balance < 0 ? 'text-gray-400' : 'text-black'}`}>
-                {balance < 0 ? '−' : ''}{formatShort(Math.abs(balance))}
-              </p>
-            </div>
+          {/* Balance hero */}
+          <div className="bg-black rounded-2xl p-5 mb-4 shadow-sm">
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-1">Số dư</p>
+            <p className="text-4xl font-bold text-white tracking-tight">
+              {balance < 0 ? '−' : ''}{fmt(Math.abs(balance))}
+            </p>
+            <p className="text-xs text-neutral-500 mt-2">{data?.summary?.total_count || 0} giao dịch</p>
           </div>
 
-          {/* Số dư lớn */}
-          <div className="bg-white border border-gray-200 p-4 mb-4">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-1">Số dư</p>
-            <p className={`text-3xl font-bold tracking-tight ${balance < 0 ? 'text-gray-400' : 'text-black'}`}>
-              {balance < 0 ? '−' : ''}{formatMoney(Math.abs(balance))}
-            </p>
-            <p className="text-xs text-gray-300 mt-1">{data?.summary?.total_count || 0} giao dịch</p>
+          {/* Summary cards */}
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="bg-white rounded-2xl shadow-sm p-4">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Tổng Thu</p>
+              <p className="text-2xl font-bold text-black">{fmtS(thu)}</p>
+            </div>
+            <div className="bg-white rounded-2xl shadow-sm p-4">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-2">Tổng Chi</p>
+              <p className="text-2xl font-bold text-black">{fmtS(chi)}</p>
+            </div>
           </div>
 
           {/* Chi theo danh mục */}
-          <div className="bg-white border border-gray-200 p-4 mb-4">
-            <p className="text-xs text-gray-400 uppercase tracking-widest mb-4">Chi theo danh mục</p>
+          <div className="bg-white rounded-2xl shadow-sm p-5 mb-4">
+            <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Chi theo danh mục</p>
             {totalChi === 0 ? (
-              <p className="text-sm text-gray-300 text-center py-4">Chưa có khoản chi nào</p>
+              <p className="text-sm text-neutral-300 text-center py-4">Chưa có khoản chi nào</p>
             ) : (
-              <div className="space-y-4">
-                {categoryData.map((cat) => {
+              <div className="space-y-5">
+                {catData.map((cat) => {
                   const pct = totalChi > 0 ? (cat.total / totalChi) * 100 : 0;
                   return (
                     <div key={cat.key}>
-                      <div className="flex items-baseline justify-between mb-1">
+                      <div className="flex items-start justify-between mb-1.5">
                         <div>
-                          <span className="text-sm font-medium text-black">{cat.label}</span>
-                          <span className="text-xs text-gray-300 ml-1.5">{cat.hint}</span>
+                          <p className="text-sm font-semibold text-[#0a0a0a]">{cat.label}</p>
+                          <p className="text-xs text-neutral-400">{cat.hint}</p>
                         </div>
-                        <div className="text-right">
-                          <span className="text-sm font-semibold text-black">{formatMoney(cat.total)}</span>
-                          <span className="text-xs text-gray-400 ml-1.5">{pct.toFixed(0)}%</span>
+                        <div className="text-right ml-3 flex-shrink-0">
+                          <p className="text-sm font-bold text-black">{fmtS(cat.total)}</p>
+                          <p className="text-xs text-neutral-400">{pct.toFixed(0)}%</p>
                         </div>
                       </div>
-                      {/* Thanh tiến trình */}
-                      <div className="h-1.5 bg-gray-100 w-full">
+                      <div className="h-1.5 bg-neutral-100 rounded-full overflow-hidden">
                         <div
-                          className="h-full transition-all duration-500"
-                          style={{ width: `${pct}%`, backgroundColor: cat.shade }}
+                          className="h-full rounded-full transition-all duration-700"
+                          style={{ width: `${pct}%`, backgroundColor: cat.color }}
                         />
                       </div>
-                      <p className="text-xs text-gray-300 mt-0.5">{cat.count} giao dịch</p>
+                      <p className="text-[10px] text-neutral-300 mt-1">{cat.count} giao dịch</p>
                     </div>
                   );
                 })}
@@ -162,57 +146,52 @@ export default function ReportPage() {
             )}
           </div>
 
-          {/* Tỷ lệ Thu / Chi (pie) */}
+          {/* Pie chart */}
           {pieData.length > 0 && (
-            <div className="bg-white border border-gray-200 p-4 mb-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Tỷ lệ Thu / Chi</p>
+            <div className="bg-white rounded-2xl shadow-sm p-5 mb-4">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-3">Tỷ lệ Thu / Chi</p>
               <ResponsiveContainer width="100%" height={180}>
                 <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%" cy="50%"
-                    outerRadius={70}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    <Cell fill="#000000" />
-                    <Cell fill="#d1d5db" />
+                  <Pie data={pieData} cx="50%" cy="50%" outerRadius={70} innerRadius={35} dataKey="value"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
+                    <Cell fill="#0a0a0a" />
+                    <Cell fill="#d4d4d4" />
                   </Pie>
-                  <Tooltip formatter={(v) => formatMoney(v)} />
+                  <Tooltip formatter={(v) => fmt(v)} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
           )}
 
-          {/* Biểu đồ cột theo ngày */}
+          {/* Bar chart */}
           {barData.length > 0 && (
-            <div className="bg-white border border-gray-200 p-4">
-              <p className="text-xs text-gray-400 uppercase tracking-widest mb-3">Thu chi theo ngày</p>
+            <div className="bg-white rounded-2xl shadow-sm p-5">
+              <p className="text-xs font-semibold text-neutral-400 uppercase tracking-wider mb-4">Thu chi theo ngày</p>
               <ResponsiveContainer width="100%" height={180}>
-                <BarChart data={barData} barCategoryGap="30%">
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={formatShort} tick={{ fontSize: 10, fill: '#9ca3af' }} width={35} axisLine={false} tickLine={false} />
-                  <Tooltip formatter={(v) => formatMoney(v)} />
-                  <Bar dataKey="thu" name="Thu" fill="#000000" radius={0} />
-                  <Bar dataKey="chi" name="Chi" fill="#d1d5db" radius={0} />
+                <BarChart data={barData} barCategoryGap="35%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f5f5f5" />
+                  <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#a3a3a3' }} axisLine={false} tickLine={false} />
+                  <YAxis tickFormatter={fmtS} tick={{ fontSize: 10, fill: '#a3a3a3' }} width={32} axisLine={false} tickLine={false} />
+                  <Tooltip formatter={(v) => fmt(v)} contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }} />
+                  <Bar dataKey="thu" name="Thu" fill="#0a0a0a" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="chi" name="Chi" fill="#d4d4d4" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-              <div className="flex gap-4 mt-2 justify-center">
-                <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <span className="w-3 h-3 bg-black inline-block" /> Thu
+              <div className="flex gap-4 mt-3 justify-center">
+                <span className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#0a0a0a] inline-block" /> Thu
                 </span>
-                <span className="flex items-center gap-1.5 text-xs text-gray-500">
-                  <span className="w-3 h-3 bg-gray-300 inline-block" /> Chi
+                <span className="flex items-center gap-1.5 text-xs text-neutral-500 font-medium">
+                  <span className="w-2.5 h-2.5 rounded-sm bg-[#d4d4d4] inline-block" /> Chi
                 </span>
               </div>
             </div>
           )}
 
           {pieData.length === 0 && (
-            <div className="text-center text-gray-300 py-12 border border-dashed border-gray-200">
-              <p className="text-sm">Chưa có dữ liệu trong khoảng thời gian này</p>
+            <div className="bg-white rounded-2xl shadow-sm py-12 text-center">
+              <p className="text-3xl mb-2">📊</p>
+              <p className="text-sm text-neutral-300 font-medium">Chưa có dữ liệu</p>
             </div>
           )}
         </>
